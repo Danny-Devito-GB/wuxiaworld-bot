@@ -1,0 +1,84 @@
+name: WuxiaWorld Bot
+on:
+  schedule:
+    - cron: "0 8,20 * * *"   # 8am and 8pm UTC
+  workflow_dispatch: {}       # manual "Run workflow" button
+
+permissions:
+  contents: write   # needed for the heartbeat-commit step below
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-playwright
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install playwright --break-system-packages
+          playwright install --with-deps chromium
+
+      # Cache keys can't be overwritten once created, so each run saves
+      # under a unique key and restores from the most recent prefix match.
+      - name: Restore session state
+        uses: actions/cache/restore@v4
+        with:
+          path: wuxiaworld_state.json
+          key: ww-session-${{ github.run_id }}
+          restore-keys: |
+            ww-session-
+
+      - name: Run bot
+        id: run-bot
+        env:
+          WW_EMAIL: ${{ secrets.WW_EMAIL }}
+          WW_PASSWORD: ${{ secrets.WW_PASSWORD }}
+          CI: "true"
+        run: python wuxiaworld_bot.py
+
+      - name: Save session state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: wuxiaworld_state.json
+          key: ww-session-${{ github.run_id }}
+
+      # Pushes a commit only on runs that actually claimed something —
+      # this is the heartbeat that keeps GitHub from auto-disabling the
+      # schedule after 60 days of repo inactivity. Most runs land on
+      # cooldown and skip this step entirely, so commits stay roughly
+      # once/day rather than once per scheduled run.
+      - name: Commit unlock heartbeat
+        if: steps.run-bot.outputs.unlocked == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > last_unlock.txt
+          git add last_unlock.txt
+          git commit -m "chore: unlock heartbeat"
+          git push
+
+      - name: Upload log + error screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wuxiaworld-bot-run-${{ github.run_number }}
+          path: |
+            wuxiaworld_bot.log
+            error_*.png
+            debug_*.png
+          if-no-files-found: ignore
+          retention-days: 14

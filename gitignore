@@ -1,0 +1,30 @@
+# Session state — contains auth cookies / localStorage, never commit this
+wuxiaworld_state.json
+
+# Logs and run artifacts
+wuxiaworld_bot.log
+*.log
+error_*.png
+debug_*.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Playwright
+.cache/
+ms-playwright/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local env files, if you ever switch off OS env vars
+.env
+.env.local
