@@ -1,4 +1,14 @@
 name: WuxiaWorld Bot
+
+# Runs twice daily at fixed times the free-unlock cool-down is 23h, 
+# which doesn't divide evenly into cron's fixed daily slots, so this
+# can drift up to ~1h relative to the actual unlock moment. 
+# Trading some precision for far fewer runs/day.
+#
+# CURRENT VALUE (0 8,20 UTC) = 9am/9pm UK time.
+# GitHub Actions cron is UTC-only with no time-zone awareness either way —
+# whatever local time this is meant to track will drift 1h whenever
+# UK's DST offset flips.
 on:
   schedule:
     - cron: "0 8,20 * * *"   # 8am and 8pm UTC
@@ -11,30 +21,34 @@ jobs:
   run-bot:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Chromium + its system deps are baked into this image, so we skip the
+    # apt-get install and browser-download steps entirely (~26s of the
+    # previous ~30s install time). The Playwright pip package itself is
+    # NOT included in the image and still needs installing.
+    # Image tag must match the pinned version below or Playwright can't
+    # find the browser binaries.
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.60.0-noble
+      options: --user pwuser   # named user from the image's own Dockerfile — avoids root (disables Chromium's sandbox) without guessing a UID
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-playwright
-          restore-keys: ${{ runner.os }}-pip-
+      - name: Install Playwright package
+        run: pip install playwright==1.60.0
 
-      - name: Install dependencies
-        run: |
-          pip install playwright --break-system-packages
-          playwright install --with-deps chromium
-
-      # Cache keys can't be overwritten once created, so each run saves
-      # under a unique key and restores from the most recent prefix match.
+      # continue-on-error: a cache failure here should mean "log in fresh
+      # this run," not "the bot doesn't run today." Also matters for the
+      # heartbeat step below — without this, a failure here would silently
+      # skip that step too, since plain `if:` conditions implicitly require
+      # every prior step to have succeeded.
       - name: Restore session state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
+        continue-on-error: true
         with:
           path: wuxiaworld_state.json
           key: ww-session-${{ github.run_id }}
@@ -51,7 +65,8 @@ jobs:
 
       - name: Save session state
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
+        continue-on-error: true
         with:
           path: wuxiaworld_state.json
           key: ww-session-${{ github.run_id }}
@@ -59,7 +74,7 @@ jobs:
       # Pushes a commit only on runs that actually claimed something —
       # this is the heartbeat that keeps GitHub from auto-disabling the
       # schedule after 60 days of repo inactivity. Most runs land on
-      # cooldown and skip this step entirely, so commits stay roughly
+      # cool-down and skip this step entirely, so commits stay roughly
       # once/day rather than once per scheduled run.
       - name: Commit unlock heartbeat
         if: steps.run-bot.outputs.unlocked == 'true'
@@ -73,7 +88,7 @@ jobs:
 
       - name: Upload log + error screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wuxiaworld-bot-run-${{ github.run_number }}
           path: |
