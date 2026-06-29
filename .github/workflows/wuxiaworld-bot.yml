@@ -16,7 +16,8 @@ name: WuxiaWorld Bot
 # the platform fires at once.
 on:
   schedule:
-    - cron: "8 8,20 * * *"   # 8:08am and 8:08pm UTC = 9am/9pm UK (BST)
+    - cron: "8 8 * * *"   # 8:08am UTC = 9am UK (BST)
+    - cron: "8 20 * * *"  # 8:08pm UTC = 9pm UK (BST)
   workflow_dispatch: {}       # manual "Run workflow" button
 
 permissions:
