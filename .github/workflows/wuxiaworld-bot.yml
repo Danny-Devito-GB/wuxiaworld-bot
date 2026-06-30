@@ -15,9 +15,11 @@ name: WuxiaWorld Bot
 # or dropped under high load, since that's when every free-tier cron on
 # the platform fires at once.
 on:
-  schedule:
-    - cron: "8 8 * * *"   # 8:08am UTC = 9am UK (BST)
-    - cron: "8 20 * * *"  # 8:08pm UTC = 9pm UK (BST)
+  # the bot was not running as scheduled via cron, so I scheduled it with
+  # cron-job.org.
+  #schedule:
+  #  - cron: "8 8 * * *"   # 8:08am UTC = 9am UK (BST)
+  #  - cron: "8 20 * * *"  # 8:08pm UTC = 9pm UK (BST)
   workflow_dispatch: {}       # manual "Run workflow" button
 
 permissions:
