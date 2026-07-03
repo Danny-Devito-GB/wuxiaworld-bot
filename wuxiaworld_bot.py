@@ -346,7 +346,23 @@ async def claim_free_chapters(page: Page, slug: str, free_count: int) -> list[in
             claimed.append(chapter.number)
             log.info("Chapter %d unlocked ✓", chapter.number)
         except PWTimeoutError:
-            log.warning("Chapter %d still locked after unlock attempt", chapter.number)
+            log.warning("Chapter %d still locked after first attempt — retrying...", chapter.number)
+            # Retry once: navigate to the same URL again and re-wait
+            try:
+                await safe_goto(page, f"{BASE_URL}{chapter.href}")
+                await page.wait_for_selector('.shadow-chapter-lock', state='detached', timeout=10_000)
+                claimed.append(chapter.number)
+                log.info("Chapter %d unlocked on retry ✓", chapter.number)
+            except PWTimeoutError:
+                log.error(
+                    "Chapter %d FAILED to unlock after retry — skipping. "
+                    "This chapter was not claimed.",
+                    chapter.number,
+                )
+                # Emit a GitHub Actions warning annotation — visible as a
+                # yellow banner on the run summary page without needing to
+                # open the artifact log. No-op outside of Actions.
+                print(f"::warning::Chapter {chapter.number} failed to unlock after retry and was not claimed")
 
     return claimed
 
@@ -639,6 +655,11 @@ async def run_bot() -> bool:
 
     if any(r["status"] == "error" for r in results):
         success = False
+
+    if any(r["status"] == "partial" for r in results):
+        success = False
+        log.error("One or more books only partially claimed — flagging for non-zero exit")
+
     if not success:
         log.error("Run completed with errors — flagging for non-zero exit")
  
@@ -654,7 +675,6 @@ async def run_bot() -> bool:
             f.write(f"unlocked={'true' if unlocked else 'false'}\n")
  
     return success
-
 
 
 if __name__ == "__main__":
