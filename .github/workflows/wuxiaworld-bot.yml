@@ -5,21 +5,15 @@ name: WuxiaWorld Bot
 # can drift up to ~1h relative to the actual unlock moment.
 # Trading some precision for far fewer runs/day.
 
-# CURRENT VALUE (8 8,20 UTC) = 9am/9pm UK time.
+# CURRENT VALUE (0 0,12 UTC) = 12am/12pm UK time.
 # GitHub Actions cron is UTC-only with no time-zone awareness either way —
 # whatever local time this is meant to track will drift 1h whenever
 # UK's DST offset flips.
-#
-# Minute offset to :08 (not :00) is deliberate: GitHub's own docs warn
-# that schedules firing exactly on the hour are more likely to be delayed
-# or dropped under high load, since that's when every free-tier cron on
-# the platform fires at once.
 on:
   # the bot was not running as scheduled via cron, so I scheduled it with
   # cron-job.org.
   #schedule:
-  #  - cron: "8 8 * * *"   # 8:08am UTC = 9am UK (BST)
-  #  - cron: "8 20 * * *"  # 8:08pm UTC = 9pm UK (BST)
+  #  - cron: "0 0,12 * * *"   # 12am/12pm UTC
   workflow_dispatch: {}       # manual "Run workflow" button
 
 permissions:
