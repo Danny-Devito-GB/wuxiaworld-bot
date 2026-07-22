@@ -55,7 +55,7 @@ python wuxiaworld_bot.v11.py --force
 ## Running on a schedule (GitHub Actions)
 
 The workflow at `.github/workflows/wuxiaworld-bot.yml` runs the bot twice
-daily — 10am and 10pm Houston time — instead of waiting for the exact
+daily — 12am and 12pm UTC — instead of waiting for the exact
 23-hour unlock moment, trading a little precision for far fewer runs.
 
 **One-time setup:**
@@ -82,8 +82,6 @@ daily — 10am and 10pm Houston time — instead of waiting for the exact
 
 ## Known issues / not yet implemented
 
-- Daily login-streak reward claiming (separate from mission rewards) isn't
-  implemented yet.
 - Mission-progress parsing scrapes visible page text with a regex rather
   than a structured API — works against the current page markup, but isn't
   bulletproof against a layout change.
