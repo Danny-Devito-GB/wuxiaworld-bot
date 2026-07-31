@@ -209,7 +209,7 @@ async def login(page: Page, context):
     await page.fill("#Password", PASSWORD)
 
     log.info("Submitting credentials …")
-    await page.click("button:has-text('Log in'), button[type='submit']")
+    await page.locator("button[type='submit']").click()
 
     try:
         await page.wait_for_url(
@@ -254,7 +254,7 @@ class Chapter:
 async def ensure_chapters_tab(page: Page) -> None:
     """The book page sometimes lands on the 'About' tab instead of
     'Chapters'. Click into Chapters if it isn't already selected."""
-    tab = page.locator("#full-width-tab-1")
+    tab = page.get_by_role("tab", name="Chapters")
     if await tab.count() == 0:
         return
     selected = await tab.first.get_attribute("aria-selected")
@@ -285,6 +285,17 @@ async def get_timer_text(page: Page) -> str | None:
 
 async def expand_all_accordions(page: Page) -> None:
     """Clicks every collapsed book/volume accordion so chapter rows render."""
+    collapsed = page.locator('.MuiAccordionSummary-root[aria-expanded="false"]')
+    initial_count = await collapsed.count()
+
+    if initial_count == 0:
+        log.warning(
+            "No collapsed accordions found — either everything is already "
+            "expanded, or the accordion markup changed. Chapter list may "
+            "be incomplete.")
+        return
+
+    log.info("Expanding %d accordions…", initial_count)
     try:
         await page.evaluate("""
             () => {
@@ -293,8 +304,16 @@ async def expand_all_accordions(page: Page) -> None:
             }
         """)
         await page.wait_for_timeout(1_000)  # Wait for all accordions to render
-    except Exception as e:
-        log.warning("Failed to expand accordions: %s", e)
+
+    except Exception as error:
+        log.warning("Failed to expand accordions: %s", error)
+        return
+
+    remaining = await collapsed.count()
+    if remaining:
+        log.warning("%d accordions still collapsed after expand attempt", remaining)
+    else:
+        log.info("All %d accordions expanded ✓", initial_count)
 
 
 async def collect_chapters(page: Page, slug: str) -> list[Chapter]:
