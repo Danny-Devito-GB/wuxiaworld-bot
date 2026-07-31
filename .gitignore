@@ -28,3 +28,4 @@ Thumbs.db
 # Local env files, if you ever switch off OS env vars
 .env
 .env.local
+run_script.bat # Windows batch file for running the script, not needed in repo
