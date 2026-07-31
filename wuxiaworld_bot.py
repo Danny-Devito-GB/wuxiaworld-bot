@@ -254,7 +254,7 @@ class Chapter:
 async def ensure_chapters_tab(page: Page) -> None:
     """The book page sometimes lands on the 'About' tab instead of
     'Chapters'. Click into Chapters if it isn't already selected."""
-    tab = page.locator("#full-width-tab-0")
+    tab = page.locator("#full-width-tab-1")
     if await tab.count() == 0:
         return
     selected = await tab.first.get_attribute("aria-selected")
